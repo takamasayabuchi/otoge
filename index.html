@@ -120,7 +120,7 @@
       width: 100%;
       height: 10px; /* 基準線の太さを2倍 */
       background: red;
-      bottom: 150px;
+      bottom: 120px;
       transition: background-color 0.2s ease;
     }
 
@@ -366,19 +366,19 @@
           lane.classList.remove('active');
         }, 200);
 
-        const judgeLineY = lanes[0].clientHeight - 130;
+        const judgeLineY = lanes[0].clientHeight - 140;
         const closestNote = notes.find(note => note.lane === laneIndex);
         if (closestNote) {
           const diff = Math.abs(closestNote.element.offsetTop - judgeLineY);
-          if (diff < 50) {
+          if (diff < 40) {
             showFeedback(lane, "Perfect!", "aqua");
             score += 10;
             combo++;
-          } else if (diff < 90) {
+          } else if (diff < 100) {
             showFeedback(lane, "Excellent!", "green");
             score += 5;
             combo++;
-          } else if (diff < 130) {
+          } else if (diff < 140) {
             showFeedback(lane, "Good", "yellow");
             score += 2;
             combo++;
