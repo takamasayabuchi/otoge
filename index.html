@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+　
+
   <title>音ゲー - 修正版</title>
   <style>
 
@@ -417,6 +419,16 @@ if (combo >= 100) {
       setTimeout(() => feedback.remove(), 500);
     }
 
+var t = 0;  // tは最後に指が離れた時刻を保存するための変数
+
+// "touchend" イベント（指が離れた時）が発生したときに実行
+document.documentElement.addEventListener('touchend', function(e) {
+  var currentTime = new Date().getTime();  // 現在の時間を取得
+  if (currentTime - t <= 350) {  // 前回のタップから350ミリ秒以内だったらダブルタップ
+    e.preventDefault();  // 拡大・縮小をキャンセルする
+  }
+  t = currentTime;  // 最後に指が離れた時間を記録
+}, false);
 
   </script>
 </body>
