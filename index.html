@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>音ゲー - 修正版</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #000;
+      color: #fff;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    #start-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #000;
+    }
+
+    #bgm-cover {
+      width: 300px;
+      height: 300px;
+      background: url('bgm-cover.jpg') no-repeat center center;
+      background-size: cover;
+      border: 2px solid #fff;
+      margin-bottom: 20px;
+    }
+
+    #start-button {
+      font-size: 24px;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+
+    #game-container {
+      display: none;
+      flex-direction: row;
+      justify-content: space-around;
+      height: 80vh;
+      border: 2px solid #fff;
+      position: relative;
+    }
+
+    #score-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      font-size: 24px;
+      z-index: 100;
+    }
+
+    #score-display {
+      font-size: 24px;
+    }
+
+    #combo-display {
+      font-size: 36px; /* スコア表示の1.5倍 */
+      margin: 10px 0;
+    }
+
+    .combo-animation {
+      animation: combo-up 0.25s ease;
+    }
+
+    @keyframes combo-up {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.25); }
+      100% { transform: scale(1); }
+    }
+
+    .lane {
+      width: 22%;
+      height: 100%;
+      background: linear-gradient(to top, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #333;
+      transition: background-color 0.3s ease;
+    }
+
+    .lane.active {
+      background-color: rgba(255, 255, 255, 0.1); /* 透明度を10%薄く */
+    }
+
+    .note {
+      width: 80%;
+      height: 20px;
+      background: #0f0;
+      position: absolute;
+      left: 10%;
+      top: -20px;
+      border-radius: 10px;
+      transition: background-color 0.2s ease;
+    }
+
+
+    .note.flash {
+      background: #fff;
+    }
+
+    .judge-line {
+      position: absolute;
+      width: 100%;
+      height: 10px; /* 基準線の太さを2倍 */
+      background: red;
+      bottom: 150px;
+      transition: background-color 0.2s ease;
+    }
+
+    .judge-line.active {
+      background: yellow;
+    }
+
+    .hit-feedback {
+      position: absolute;
+      font-size: 16px;
+      font-weight: bold;
+      color: yellow;
+      animation: fade-out 0.5s forwards;
+      text-align: center;
+      width: 100%;
+    }
+
+    @keyframes fade-out {
+      0% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-32px); /* 判定文字の移動量を2割落とす */
+      }
+    }
+
+    #result-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #000;
+    }
+
+    #result-cover {
+      width: 200px;
+      height: 200px;
+      background: url('bgm-cover.jpg') no-repeat center center;
+      background-size: cover;
+      border: 2px solid #fff;
+      margin-bottom: 20px;
+    }
+
+    #retry-button {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin-top: 20px;
+    }
+
+    #final-evaluation {
+      font-size: 48px; /* 評価表示のサイズ */
+      color: yellow;
+    }
+}
+
+
+
+  </style>
+</head>
+<body>
+  <div id="start-screen">
+    <div id="bgm-cover"></div>
+    <button id="start-button">Start Game</button>
+  </div>
+
+  <div id="game-container">
+    <div id="score-container">
+      <div id="score-display">Score: 0</div>
+      <div id="combo-display">Combo: 0</div>
+    </div>
+	
+    <div class="lane" id="lane-1">
+      <div class="judge-line"></div>
+    </div>
+    <div class="lane" id="lane-2">
+      <div class="judge-line"></div>
+    </div>
+    <div class="lane" id="lane-3">
+      <div class="judge-line"></div>
+    </div>
+    <div class="lane" id="lane-4">
+      <div class="judge-line"></div>
+    </div>
+  </div>
+
+  <div id="result-screen">
+    <div id="result-cover"></div>
+    <h2>Game Over</h2>
+    <div id="final-score">Score: 0</div>
+    <div id="final-evaluation"></div>
+    <button id="retry-button">Retry</button>
+  </div>
+
+  <audio id="bgm" preload="auto">
+    <source src="free.mp3" type="audio/mp3" />
+  </audio>
+
+  <script>
+    const startScreen = document.getElementById('start-screen');
+    const gameContainer = document.getElementById('game-container');
+    const resultScreen = document.getElementById('result-screen');
+    const startButton = document.getElementById('start-button');
+    const retryButton = document.getElementById('retry-button');
+    const finalScore = document.getElementById('final-score');
+    const finalEvaluation = document.getElementById('final-evaluation');
+    const scoreDisplay = document.getElementById('score-display');
+    const comboDisplay = document.getElementById('combo-display');
+    const bgm = document.getElementById('bgm');
+    const lanes = document.querySelectorAll('.lane');
+    const resultCover = document.getElementById('result-cover');
+
+    let score = 0;
+    let combo = 0;
+    let notes = [];
+    let gameInterval;
+    let isLateGame = false;
+    const noteSpeed = 5;
+    const BPM = 128;
+    const totalNotes = BPM * 2;
+    const noteInterval = (60 / BPM) * 1000;
+
+    const evaluations = [
+      { min: 9001, name: "KING" },
+      { min: 7001, name: "SSS" },
+      { min: 6001, name: "SS" },
+      { min: 5001, name: "S" },
+      { min: 4001, name: "AAA" },
+      { min: 3001, name: "AA" },
+      { min: 2001, name: "A" },
+      { min: 1001, name: "BBB" },
+      { min: 0, name: "BB" },
+    ];
+
+    resultCover.style.backgroundImage = "url('bgm-cover.jpg')";
+
+    startButton.addEventListener('click', async () => {
+      startScreen.style.display = 'none';
+      gameContainer.style.display = 'flex';
+      try {
+        await bgm.play();
+        startGame();
+      } catch (err) {
+        alert("音楽の再生がブロックされています。再度ボタンを押してください。");
+        startScreen.style.display = 'flex';
+      }
+    });
+
+    retryButton.addEventListener('click', () => {
+      resultScreen.style.display = 'none';
+      startScreen.style.display = 'flex';
+      resetGame();
+    });
+
+    function resetGame() {
+      score = 0;
+      combo = 0;
+      notes.forEach(note => note.element.remove());
+      notes = [];
+      scoreDisplay.textContent = "Score: 0";
+      comboDisplay.textContent = "Combo: 0";
+    }
+
+    function startGame() {
+      resetGame();
+      let lastNoteTime = Date.now();
+
+      gameInterval = setInterval(() => {
+        const now = Date.now();
+
+        if (!isLateGame && bgm.currentTime >= bgm.duration / 2) {
+          isLateGame = true;
+        }
+
+        const adjustedInterval = isLateGame ? noteInterval / 1.5 : noteInterval;
+
+        if (now - lastNoteTime >= adjustedInterval) {
+          createNotes();
+          lastNoteTime = now;
+        }
+
+        moveNotes();
+      }, 16);
+
+      bgm.addEventListener('ended', endGame);
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      notes.forEach(note => note.element.remove());
+      notes = [];
+      gameContainer.style.display = 'none';
+
+      const evaluation = evaluations.find(e => score >= e.min)?.name || "BB";
+
+      let currentScore = 0;
+      const scoreInterval = setInterval(() => {
+        currentScore += Math.ceil(score / 30);
+        if (currentScore >= score) {
+          clearInterval(scoreInterval);
+          finalScore.textContent = `Score: ${score}`;
+          finalEvaluation.textContent = `Result: ${evaluation}`;
+        } else {
+          finalScore.textContent = `Score: ${currentScore}`;
+        }
+      }, 100);
+
+      resultScreen.style.display = 'flex';
+    }
+
+    function createNotes() {
+      const simultaneousNotes = Math.random() < 0.3 ? 2 : 1;
+      for (let i = 0; i < simultaneousNotes; i++) {
+        const laneIndex = Math.floor(Math.random() * lanes.length);
+        const note = document.createElement('div');
+        note.classList.add('note');
+        lanes[laneIndex].appendChild(note);
+        notes.push({ element: note, lane: laneIndex, y: 0 });
+      }
+    }
+
+    function moveNotes() {
+      notes.forEach((note, index) => {
+        note.y += noteSpeed;
+        note.element.style.top = `${note.y}px`;
+
+        if (note.y > lanes[0].clientHeight) {
+          note.element.remove();
+          notes.splice(index, 1);
+        }
+      });
+    }
+
+    lanes.forEach((lane, laneIndex) => {
+      lane.addEventListener('touchstart', () => {
+        const judgeLine = lane.querySelector('.judge-line');
+        judgeLine.classList.add('active');
+        lane.classList.add('active');
+        setTimeout(() => {
+          judgeLine.classList.remove('active');
+          lane.classList.remove('active');
+        }, 200);
+
+        const judgeLineY = lanes[0].clientHeight - 130;
+        const closestNote = notes.find(note => note.lane === laneIndex);
+        if (closestNote) {
+          const diff = Math.abs(closestNote.element.offsetTop - judgeLineY);
+          if (diff < 50) {
+            showFeedback(lane, "Perfect!", "aqua");
+            score += 10;
+            combo++;
+          } else if (diff < 90) {
+            showFeedback(lane, "Excellent!", "green");
+            score += 5;
+            combo++;
+          } else if (diff < 130) {
+            showFeedback(lane, "Good", "yellow");
+            score += 2;
+            combo++;
+          } else {
+ 				showFeedback(lane, "Bad", "red");
+            combo = 0;
+          }
+          closestNote.element.remove();
+          notes.splice(notes.indexOf(closestNote), 1);
+          scoreDisplay.textContent = `Score: ${score}`;
+
+
+
+// コンボ数に応じて文字色を変更
+if (combo >= 100) {
+  comboDisplay.style.color = 'aqua';
+} else if (combo >= 50) {
+  comboDisplay.style.color = 'yellow';
+} else {
+  comboDisplay.style.color = 'white';
+}
+          comboDisplay.classList.add('combo-animation');
+          comboDisplay.textContent = `Combo: ${combo}`;
+
+
+          setTimeout(() => comboDisplay.classList.remove('combo-animation'), 250);
+        }
+      });
+    });
+
+    function showFeedback(lane, text, color) {
+      const feedback = document.createElement('div');
+      feedback.classList.add('hit-feedback');
+      feedback.textContent = text;
+      feedback.style.color = color;
+      feedback.style.top = `${lane.clientHeight - 170}px`;
+      lane.appendChild(feedback);
+      setTimeout(() => feedback.remove(), 500);
+    }
+
+
+  </script>
+</body>
+</html>
